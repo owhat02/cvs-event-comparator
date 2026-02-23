@@ -9,7 +9,7 @@ CU 공식 홈페이지 '전체' 행사 탭 데이터 전수 수집 및 전처리
 
 수집 항목: brand, name, price, event, img_url
 
-🛠 사용 방법
+사용 방법
 가상환경 생성 및 라이브러리 설치: pip install -r requirements.txt
 
 크롤러 실행: python script.py
