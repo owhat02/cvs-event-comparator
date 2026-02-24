@@ -44,20 +44,24 @@ if not df.empty:
 
     # 필터 영역 (01_overall_summary와 동일한 스타일)
     with st.expander("🔍 상세 필터 및 검색", expanded=True):
-        f1, f2, f3, f4, f5 = st.columns([1, 1, 1, 1.5, 1])
-        with f1:
+        # 첫 번째 줄: 검색 및 정렬
+        r1_c1, r1_c2 = st.columns([3, 1])
+        with r1_c1:
+            search_query = st.text_input("📝 검색", "", placeholder="상품명 입력")
+        with r1_c2:
+            sort_option = st.selectbox("💰 정렬", ["기본", "가격 낮은 순", "가격 높은 순"])
+
+        # 두 번째 줄: 브랜드, 행사, 분류
+        r2_c1, r2_c2, r2_c3 = st.columns([1, 1, 1])
+        with r2_c1:
             brand_list = sorted(df['brand'].unique().tolist())
             selected_brands = st.multiselect("🏪 브랜드", brand_list, default=brand_list)
-        with f2:
+        with r2_c2:
             event_list = sorted([e for e in df['event'].unique().tolist() if e not in ['SALE', '세일']])
             selected_events = st.multiselect("🎁 행사", event_list, default=event_list)
-        with f3:
+        with r2_c3:
             cat_list = sorted(df['category'].unique().tolist())
             selected_cats = st.multiselect("📂 분류", cat_list, default=cat_list)
-        with f4:
-            search_query = st.text_input("📝 검색", "", placeholder="상품명 입력")
-        with f5:
-            sort_option = st.selectbox("💰 정렬", ["기본", "가격 낮은 순", "가격 높은 순"])
 
     # 데이터 필터링
     filtered_df = df[
