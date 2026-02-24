@@ -1,7 +1,7 @@
 import streamlit as st
 
 
-def show_all_summary(filtered_df):
+def show_all_data(filtered_df):
     items_per_page = 30
     total_pages = max((len(filtered_df) // items_per_page) + (1 if len(filtered_df) % items_per_page > 0 else 0), 1)
 
@@ -20,7 +20,7 @@ def show_all_summary(filtered_df):
                         <div class="img-container"><img src="{row['img_url']}"></div>
                         <div class="product-name">{row['name']}</div>
                         <div style="margin-top: 8px;">
-                            <span style="font-size: 1.2rem; font-weight: 800; color: #ffffff;">{row['price']:,}원</span>
+                            <span class="main-price"">{row['price']:}원</span>
                             <span style="font-size: 0.85rem; color: #ff6b6b; font-weight: bold; margin-left: 5px;">({row['discount_rate']}↓)</span>
                         </div>
                         <div class="unit-price-text">개당 <b>{row['unit_price']:,}원</b></div>

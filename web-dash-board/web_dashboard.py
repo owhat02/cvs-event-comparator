@@ -5,7 +5,7 @@ from datetime import datetime
 
 # 1. 파일 분리 로직 임포트 (폴더 구조 반영)
 from filter.render_filters import render_filters
-from list.show_all_summary import show_all_summary
+from main.show_all_data import show_all_data
 from brand.show_brand_comparison import show_brand_comparison
 from good_price.show_best_value import show_best_value
 
@@ -67,7 +67,7 @@ elif sort_option == "가격 높은 순":
 
 # 메뉴별 콘텐츠 출력
 if menu == "전체 요약":
-    show_all_summary(filtered_df)
+    show_all_data(filtered_df)
 elif menu == "브랜드별 비교":
     show_brand_comparison(filtered_df)
 elif menu == "가성비 비교":
