@@ -16,9 +16,9 @@ env/
 .env.secret
 
 # 데이터 파일 (대용량 및 충돌 방지)
-data/*.csv
-data/*.xlsx
-*.sqlite3
+# data/*.csv
+# data/*.xlsx
+# *.sqlite3
 
 # 시스템 및 임시 파일
 .DS_Store
