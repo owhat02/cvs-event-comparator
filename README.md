@@ -6,8 +6,6 @@
 
 ## 📂 프로젝트 구조 (Project Structure)
 
-조원분들은 아래의 파일 구조를 참고하여 개발을 진행해 주세요.
-
 ```text
 conv-dashboard/
 ┃
