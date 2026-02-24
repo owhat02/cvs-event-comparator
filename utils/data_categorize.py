@@ -1,5 +1,6 @@
 import pandas as pd
 from loguru import logger
+import os
 
 def classify_product(name):
     name = str(name)
@@ -44,21 +45,28 @@ def classify_product(name):
 
 def run_categorization():
     logger.info("새로운 키워드로 카테고리 분류를 시작합니다.")
-    try:
-        df = pd.read_csv('cleaned_data.csv', encoding='utf-8-sig')
-        
+    input_path = 'data/cleaned_data.csv'
+    output_path = 'data/categorized_data.csv'
     
+    if not os.path.exists(input_path):
+        logger.error(f"'{input_path}' 파일이 없습니다. 정제 코드를 먼저 실행하세요.")
+        return
+
+    try:
+        df = pd.read_csv(input_path, encoding='utf-8-sig')
+        
+        # 카테고리 분류 적용
         df['category'] = df['name'].apply(classify_product)
         
-
-        df.to_csv('categorized_data.csv', index=False, encoding='utf-8-sig')
+        # 결과 저장
+        df.to_csv(output_path, index=False, encoding='utf-8-sig')
         
-        logger.success("분류 완료")
+        logger.success(f"분류 완료: '{output_path}'에 저장되었습니다.")
         print("\n[ 카테고리별 데이터 분포 ]")
         print(df['category'].value_counts())
         
-    except FileNotFoundError:
-        logger.error("cleaned_data.csv 파일이 없습니다. 정제 코드를 먼저 실행하세요.")
+    except Exception as e:
+        logger.error(f"분류 작업 중 오류 발생: {e}")
 
 if __name__ == "__main__":
     run_categorization()

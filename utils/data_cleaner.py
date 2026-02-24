@@ -6,13 +6,15 @@ import os
 def clean_and_merge():
     logger.info("데이터 정제를 시작합니다.")
     
-    all_files = glob.glob("*.csv")
+    # data/ 폴더 안의 모든 csv 파일 찾기
+    all_files = glob.glob("data/*.csv")
     
-    exclude_files = ["cleaned_data.csv", "categorized_data.csv", "7Eleven_260223.csv"]
+    # 처리 대상에서 제외할 파일들
+    exclude_files = ["data/cleaned_data.csv", "data/categorized_data.csv"]
     all_files = [f for f in all_files if f not in exclude_files]
     
     if not all_files:
-        logger.error("폴더 안에 처리할 CSV 파일이 없습니다.")
+        logger.error("data/ 폴더 안에 처리할 CSV 파일이 없습니다.")
         return
 
     logger.info(f"정제 대상 파일: {all_files}")
@@ -23,6 +25,7 @@ def clean_and_merge():
         try:
             df = pd.read_csv(file, encoding='utf-8-sig')
             
+            # 가격 데이터에서 숫자만 추출
             df['price'] = df['price'].astype(str).str.replace(r'[^0-9]', '', regex=True)
             df['price'] = pd.to_numeric(df['price'], errors='coerce').fillna(0).astype(int)
             
@@ -32,13 +35,22 @@ def clean_and_merge():
         except Exception as e:
             logger.error(f"{file} 처리 중 오류 발생: {e}")
 
+    if not df_list:
+        logger.error("로드된 데이터가 없습니다.")
+        return
+
     combined_df = pd.concat(df_list, ignore_index=True)
+    
+    # 필수 컬럼 결측치 제거 및 중복 제거
     final_df = combined_df.dropna(subset=['brand', 'name', 'event']).drop_duplicates()
     
+    # 노이즈 데이터 제거
     final_df = final_df[~final_df['name'].str.contains('디폴트 이미지', na=False)]
 
-    final_df.to_csv("cleaned_data.csv", index=False, encoding='utf-8-sig')
-    logger.success(f"정제 및 통합 완료: 총 {len(final_df)}개의 데이터가 'cleaned_data.csv'에 저장되었습니다.")
+    # 정제된 데이터 저장
+    output_path = "data/cleaned_data.csv"
+    final_df.to_csv(output_path, index=False, encoding='utf-8-sig')
+    logger.success(f"정제 및 통합 완료: 총 {len(final_df)}개의 데이터가 '{output_path}'에 저장되었습니다.")
 
 if __name__ == "__main__":
     clean_and_merge()
