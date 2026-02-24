@@ -38,11 +38,12 @@ home_page = st.Page("pages/00_home.py", title="🏠 메인보드", default=True)
 summary_page = st.Page("pages/01_overall_summary.py", title="🔍 전체 요약")
 comparison_page = st.Page("pages/02_brand_comparison.py", title="📊 브랜드 비교")
 best_value_page = st.Page("pages/03_best_value.py", title="💎 가성비 TOP 50")
+budget_page = st.Page("pages/04_Budget_Combination.py", title="🍱 꿀조합 생성기")
 
 # 내비게이션 구성
 pg = st.navigation({
     "대시보드": [home_page],
-    "상세 서비스": [summary_page, comparison_page, best_value_page]
+    "상세 서비스": [summary_page, comparison_page, best_value_page, budget_page]
 })
 
 # 사이드바 실행
