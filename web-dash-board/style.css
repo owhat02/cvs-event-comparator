@@ -1,0 +1,90 @@
+/* 상품 카드 및 이미지 컨테이너 */
+.img-container {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    border-radius: 12px;
+    background-color: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #eee;
+}
+.img-container img { width: 100%; height: 100%; object-fit: contain; }
+.product-card { margin-bottom: 20px; }
+
+/* 상품명: 흰색 */
+.product-name {
+    height: 45px;
+    overflow: hidden;
+    font-size: 0.9rem;
+    font-weight: bold;
+    margin-top: 10px;
+    line-height: 1.2;
+    color: #ffffff;
+}
+
+/* 개당 가격 및 브랜드 정보: 밝은 회색 */
+.unit-price-text {
+    font-size: 0.9rem;
+    color: #cccccc;
+    margin-top: 2px;
+}
+.brand-text {
+    font-size: 0.8rem;
+    color: #bbbbbb;
+    margin-top: 5px;
+}
+
+/* 행사 태그: 시인성을 위해 배경색 유지 */
+.event-tag {
+    background-color: #f0f0f0;
+    padding: 2px 5px;
+    border-radius: 4px;
+    color: #333333;
+    font-weight: bold;
+}
+
+/* 버튼 및 페이지네이션 스타일 */
+div.stButton > button {
+    border: none !important;
+    background-color: transparent !important;
+    color: #ff4b4b !important;
+    font-size: 1.8rem !important;
+    font-weight: bold !important;
+    box-shadow: none !important;
+    padding: 0px !important;
+    width: 100% !important;
+    outline: none !important;
+}
+
+div[data-testid="column"]:nth-child(2) div.stButton > button {
+    text-align: right !important;
+    justify-content: flex-end !important;
+    display: flex !important;
+}
+
+div[data-testid="column"]:nth-child(4) div.stButton > button {
+    text-align: left !important;
+    justify-content: flex-start !important;
+    display: flex !important;
+}
+
+div.stButton > button:hover, div.stButton > button:active {
+    background-color: transparent !important;
+    color: #b33232 !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.page-info-box {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #ff4b4b;
+    background: #fff5f5;
+    padding: 6px 0;
+    border-radius: 30px;
+    text-align: center;
+    width: 100%;
+    display: block;
+}
