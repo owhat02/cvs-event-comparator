@@ -1,3 +1,5 @@
+시각화 파일들은 utils 폴더로 옮겼고 img는 assets으로 옮겼습니다!
+
 
 # 🏪 편의점 행사 상품 데이터 대시보드 (conv-dashboard)
 
