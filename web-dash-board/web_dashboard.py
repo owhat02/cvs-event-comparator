@@ -69,6 +69,6 @@ elif sort_option == "가격 높은 순":
 if menu == "전체 요약":
     show_all_data(filtered_df)
 elif menu == "브랜드별 비교":
-    show_brand_comparison(filtered_df)
+    show_brand_comparison(filtered_df, sort_option)
 elif menu == "가성비 비교":
     show_best_value(filtered_df, df, search_query, selected_brands, selected_events,  sort_option)
