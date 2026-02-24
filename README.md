@@ -6,6 +6,8 @@
 
 ## 📂 프로젝트 구조 (Project Structure)
 
+조원분들은 아래의 파일 구조를 참고하여 개발을 진행해 주세요.
+
 ```text
 conv-dashboard/
 ┃
@@ -31,7 +33,8 @@ conv-dashboard/
 ┣━━ 📂 utils/                  # [도구] 데이터 처리 공용 유틸리티
 ┃   ┣━━ 📄 __init__.py
 ┃   ┣━━ 📄 data_cleaner.py     # 데이터 정제 및 통합 (CSV 병합 등)
-┃   ┗━━ 📄 data_categorize.py  # 키워드 기반 카테고리 자동 분류
+┃   ┣━━ 📄 data_categorize.py  # 키워드 기반 카테고리 자동 분류
+┃   ┗━━ 📊 data_visualization.ipynb # 데이터 시각화 분석 (Jupyter)
 ┃
 ┣━━ 📂 assets/                 # [Asset] 브랜드 로고 및 이미지 자원
 ┃   ┣━━ 🖼️ logo_cu.png
@@ -61,6 +64,7 @@ conv-dashboard/
 ### 3. **`utils/` (Data Processing)**
 - **`data_cleaner.py`**: 수집된 여러 CSV 파일을 하나로 합치고, 가격 정보의 숫자화 및 노이즈 데이터를 제거합니다.
 - **`data_categorize.py`**: 상품명을 분석하여 '식사류', '간식류', '음료', '생활용품' 등으로 자동 분류합니다.
+- **`data_visualization.ipynb`**: `Plotly`를 사용하여 카테고리별 가격 분포 등을 시각적으로 분석합니다.
 
 ### 4. **`templates/` & `static/` (Web Visualization)**
 - 웹 대시보드 구현을 위한 공간입니다. 
