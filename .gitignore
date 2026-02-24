@@ -1,0 +1,29 @@
+# Python 캐시 파일
+__pycache__/
+*.py[cod]
+
+# 가상환경 및 라이브러리
+venv/
+.venv/
+env/
+
+# IDE 설정 (PyCharm, VS Code)
+.idea/
+.vscode/
+
+# 보안 및 환경 변수
+.env
+.env.secret
+
+# 데이터 파일 (대용량 및 충돌 방지)
+data/*.csv
+data/*.xlsx
+*.sqlite3
+
+# 시스템 및 임시 파일
+.DS_Store
+Thumbs.db
+*.log
+
+# 개인 문서
+prd.md
