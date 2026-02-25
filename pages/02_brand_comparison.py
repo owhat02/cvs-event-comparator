@@ -34,8 +34,8 @@ def get_data():
     def calc_unit_price(row):
         e, p = row['event'], row['price']
         if e == '1+1': return p // 2
-        if e == '2+1': return p // 3
-        if e == '3+1': return p // 4
+        if e == '2+1': return (p * 2) // 3
+        if e == '3+1': return (p * 3) // 4
         return p
     
     df['unit_price'] = df.apply(calc_unit_price, axis=1)
