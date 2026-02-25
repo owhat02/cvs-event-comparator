@@ -194,6 +194,73 @@ with r2_c3:
         </a>
     """, unsafe_allow_html=True)
 
+# ------ 여기부터 시간대별로 상품 추천해주는 기능 ------
+st.markdown("<br><br>", unsafe_allow_html=True)
+
+@st.cache_data(ttl=3600)
+def load_home_data():
+    file_path = os.path.join('data', 'categorized_data.csv')
+    if os.path.exists(file_path):
+        return pd.read_csv(file_path)
+    return None
+
+df = load_home_data()
+
+if df is not None:
+    # 1. 시간대별 카테고리 결정
+    now_hour = datetime.now().hour
+    if 6 <= now_hour < 11:
+        target_cat, title, icon = ["식사류"], "🌅 바쁜 아침, 든든한 한 끼!", "🥛"
+    elif 11 <= now_hour < 14:
+        target_cat, title, icon = ["식사류"], "🍱 오늘 점심 뭐 먹지?", "🥢"
+    elif 14 <= now_hour < 18:
+        target_cat, title, icon = ["간식류", "음료"], "☕ 나른한 오후, 당 충전 시간", "🍪"
+    elif 18 <= now_hour < 21:
+        target_cat, title, icon = ["식사류"], "🍺 하루를 마무리하는 저녁", "🍗"
+    else:
+        target_cat, title, icon = ["간식류", "식사류"], "🌙 출출한 밤, 야식의 유혹", "🍜"
+
+    display_cats = " ".join([f"#{c}" for c in target_cat])
+
+    # 2. 헤더 영역 (한 줄로 배치)
+    st.markdown(f"### {icon} {title}")
+
+    col_tag, col_btn = st.columns([4, 1])
+    with col_tag:
+        st.markdown(f"현재 시간대에 딱 맞는 **{display_cats}** 상품들입니다.")
+    with col_btn:
+        # 버튼을 누르면 이 페이지가 다시 실행되면서 sample()이 다시 돌아가므로 상품이 바뀝니다!
+        st.button("🔄 다른 상품 보기", use_container_width=True)
+
+    # 3. 데이터에서 해당 카테고리 상품 5개 랜덤 추출
+    recommend_df = df[df['category'].isin(target_cat)].copy()
+    if not recommend_df.empty:
+        exclude_keywords = ['쏘피', '좋은', '섬유유연제', '티셔츠', '순수한면', '면도날', '라엘', '순면', '비비안']
+        filter_condition = recommend_df['name'].str.contains('|'.join(exclude_keywords), na=False)
+        recommend_df = recommend_df[~filter_condition]
+
+        display_items = recommend_df.sample(n=min(len(recommend_df), 5))
+        cols = st.columns(5)
+        for i, (_, row) in enumerate(display_items.iterrows()):
+            with cols[i]:
+                st.markdown(f"""
+                    <div style="background-color: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 15px; text-align: center; height: 100%;">
+                        <div style="height: 100px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px;">
+                            <img src="{row['img_url']}" style="max-width: 100%; max-height: 100px; object-fit: contain;">
+                        </div>
+                        <div style="font-size: 0.85rem; font-weight: bold; color: white; margin-bottom: 5px; height: 40px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.2;">
+                            {row['name']}
+                        </div>
+                        <div style="color: #58a6ff; font-weight: bold; font-size: 1.1rem;">{int(row['price']):,}원</div>
+                        <div style="font-size: 0.8rem; color: #ff6b6b; font-weight: bold;">{row['event']}</div>
+                        <div style="font-size: 0.75rem; color: #8b949e; margin-top: 5px;">📍 {row['brand']}</div>
+                    </div>
+                """, unsafe_allow_html=True)
+    else:
+        st.info(f"현재 {target_cat} 카테고리에 해당하는 행사 상품이 없습니다.")
+
+# ------ 여기까지 ------
+
 # 3. 하단 브랜드 로고 섹션
 st.markdown("---")
 st.markdown("### 🏢 함께하는 브랜드")
