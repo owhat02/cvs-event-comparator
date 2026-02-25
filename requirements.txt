@@ -12,3 +12,6 @@ pyproj
 ipykernel
 apscheduler
 pytz
+groq
+python-dotenv
+streamlit-float
