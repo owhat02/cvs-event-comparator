@@ -8,7 +8,7 @@ import random
 # ----------------------------------
 # 페이지 설정 및 CSS 로드
 # ----------------------------------
-st.set_page_config(page_title="예산 맞춤 꿀조합", page_icon="🍱", layout="wide")
+st.set_page_config(page_title="내 예산 맞춤 꿀조합 생성기", page_icon="🍱", layout="wide")
 
 def local_css(file_name):
     if os.path.exists(file_name):

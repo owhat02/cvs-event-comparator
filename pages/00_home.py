@@ -206,7 +206,7 @@ with r2_c1:
         <a href="/budget_combination" target="_self" style="text-decoration:none; color:inherit;">
             <div class="dashboard-card" style="cursor:pointer;">
                 <div class="card-icon">🍱</div>
-                <div class="card-title">예산 맞춤 꿀조합</div>
+                <div class="card-title">내 예산 맞춤 꿀조합 생성기</div>
                 <div class="card-desc">내 예산 안에서 가장 많이 절약할 수 있는 상품들의 조합을 추천해드려요.</div>
                 <div style="margin-top:20px; color:#58a6ff; font-weight:bold;">이동하기 →</div>
             </div>
