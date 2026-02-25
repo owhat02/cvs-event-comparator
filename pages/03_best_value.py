@@ -24,8 +24,8 @@ def get_data():
     def calc_info(row):
         e, p = row['event'], row['price']
         if e == '1+1': return p // 2, 50.0, "50%"
-        if e == '2+1': return p // 3, 33.3, "33%"
-        if e == '3+1': return p // 4, 25.0, "25%"
+        if e == '2+1': return (p * 2) // 3, 33.3, "33%"
+        if e == '3+1': return (p * 3) // 4, 25.0, "25%"
         return p, 0.0, "0%"
 
     df[['unit_price', 'discount_num', 'discount_rate']] = df.apply(lambda x: pd.Series(calc_info(x)), axis=1)

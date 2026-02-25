@@ -81,7 +81,7 @@ try:
         for idx, row in display_df.iterrows():
             img_url = row['img_url'] if pd.notna(row['img_url']) else "https://via.placeholder.com/150?text=No+Image"
             price = int(str(row['price']).replace(',', '')) if pd.notna(row['price']) else 0
-            unit_price = price // 2 if row['event'] == '1+1' else (price * 2 // 3 if row['event'] == '2+1' else price)
+            unit_price = price // 2 if row['event'] == '1+1' else (price * 2 // 3 if row['event'] == '2+1' else (price * 3 // 4 if row['event'] == '3+1' else price))
             
             scroll_html += f"""
     <div class="scroll-item">
