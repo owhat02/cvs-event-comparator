@@ -252,6 +252,18 @@ with r3_c1:
         </a>
     """, unsafe_allow_html=True)
 
+with r3_c2:
+    st.markdown("""
+        <a href="/random_picker" target="_self" style="text-decoration:none; color:inherit;">
+            <div class="dashboard-card" style="cursor:pointer;">
+                <div class="card-icon">🎲</div>
+                <div class="card-title">오늘의 럭키픽</div>
+                <div class="card-desc">메뉴 결정이 힘드신가요? 랜덤 럭키박스로 오늘 행운의 상품을 뽑아보세요!</div>
+                <div style="margin-top:20px; color:#58a6ff; font-weight:bold;">이동하기 →</div>
+            </div>
+        </a>
+    """, unsafe_allow_html=True)
+
 # 하단 브랜드 로고 섹션
 st.markdown("---")
 st.markdown("### 🏢 함께하는 브랜드")

@@ -1,0 +1,97 @@
+import streamlit as st
+import pandas as pd
+import random
+import os
+import time
+
+st.set_page_config(page_title="오늘의 럭키픽", page_icon="🎲", layout="wide")
+
+# CSS 로드
+if os.path.exists("style.css"):
+    with open("style.css", encoding="utf-8") as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+@st.cache_data(ttl=3600)
+def get_data():
+    file_path = os.path.join('data', 'categorized_data.csv')
+    if not os.path.exists(file_path): return pd.DataFrame()
+    return pd.read_csv(file_path)
+
+df = get_data()
+
+st.title("🎲 오늘의 럭키픽!")
+st.markdown("##### 메뉴 결정이 힘드신가요? 럭키박스를 열어 오늘의 행사 상품을 확인하세요!")
+
+if not df.empty:
+    col1, col2 = st.columns([1, 2])
+    
+    with col1:
+        st.subheader("🛠️ 필터 설정")
+        # 카테고리 목록 추출
+        if 'category' in df.columns:
+            categories = ["전체"] + sorted(df['category'].dropna().unique().tolist())
+        else:
+            categories = ["전체"]
+            
+        selected_cat = st.selectbox("📂 카테고리", categories)
+        
+        # 브랜드 목록 추출
+        if 'brand' in df.columns:
+            brands = sorted(df['brand'].dropna().unique().tolist())
+        else:
+            brands = []
+            
+        selected_brand = st.multiselect("🏪 브랜드", brands, default=brands)
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        pick_button = st.button("🎁 럭키박스 열기!", use_container_width=True, type="primary")
+
+    with col2:
+        if pick_button:
+            # 필터링
+            filtered_df = df[df['brand'].isin(selected_brand)]
+            if selected_cat != "전체":
+                filtered_df = filtered_df[filtered_df['category'] == selected_cat]
+            
+            if not filtered_df.empty:
+                with st.spinner("🎲 행운의 상품을 고르는 중..."):
+                    time.sleep(1) # 애니메이션 효과
+                    picked_item = filtered_df.sample(n=1).iloc[0]
+                    
+                    st.balloons()
+                    st.success(f"🎉 오늘의 추천 상품은 **{picked_item['name']}** 입니다!")
+                    
+                    # 이미지 URL 처리
+                    img_url = picked_item['img_url'] if pd.notna(picked_item['img_url']) else "https://via.placeholder.com/250?text=No+Image"
+                    
+                    # 결과 카드 디자인
+                    st.markdown(f"""
+                        <div style="background-color: #161b22; border: 2px solid #58a6ff; border-radius: 20px; padding: 30px; text-align: center;">
+                            <div style="background: white; padding: 10px; border-radius: 15px; display: inline-block; margin-bottom: 20px;">
+                                <img src="{img_url}" style="max-width: 250px; max-height: 250px; object-fit: contain;">
+                            </div>
+                            <h2 style="color: white; margin-bottom: 10px;">{picked_item['name']}</h2>
+                            <div style="font-size: 1.5rem; color: #ff6b6b; font-weight: bold; margin-bottom: 10px;">
+                                {picked_item['event']} | {int(picked_item['price']):,}원
+                            </div>
+                            <div style="color: #8b949e; font-size: 1.2rem;">
+                                📍 {picked_item['brand']} ({picked_item['category']})
+                            </div>
+                            <hr style="border-color: #30363d; margin: 20px 0;">
+                            <p style="color: #58a6ff; font-weight: bold; font-size: 1.1rem;">지금 바로 집 앞 {picked_item['brand']}(으)로 달려가세요! 🏃‍♂️</p>
+                        </div>
+                    """, unsafe_allow_html=True)
+            else:
+                st.warning("선택하신 조건에 맞는 상품이 없습니다. 필터를 조정해 보세요!")
+        else:
+            # 대기 상태 이미지 또는 아이콘
+            st.markdown("""
+                <div style="height: 400px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px dashed #30363d; border-radius: 20px; color: #8b949e;">
+                    <div style="font-size: 5rem; margin-bottom: 20px;">🎁</div>
+                    <h3>어떤 상품이 나올까요?</h3>
+                    <p>버튼을 눌러 럭키박스를 열어보세요!</p>
+                </div>
+            """, unsafe_allow_html=True)
+
+else:
+    st.error("데이터를 불러올 수 없습니다. data/categorized_data.csv 파일을 확인해주세요.")
