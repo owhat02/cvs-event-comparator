@@ -5,10 +5,18 @@ from loguru import logger
 from datetime import datetime
 import pytz
 import time
+import os
+
+# 경로 설정
+CURRENT_FILE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(CURRENT_FILE_DIR)
+SCHEDULER_LOG_DIR = os.path.join(PROJECT_ROOT, "batch", "batch_scheduler_log")
+
 
 def get_kst_now():
     kst = pytz.timezone('Asia/Seoul')
     return datetime.now(kst).replace(tzinfo=None)
+
 
 # 배치 작업: 지정된 연/월의 데이터를 가져옴 (재시도 최대 3회)
 def run_monthly_batch_task(year: int, month: int, batch_name: str = None, max_retry: int = 3, dry_run: bool = False):
@@ -24,7 +32,7 @@ def run_monthly_batch_task(year: int, month: int, batch_name: str = None, max_re
     """
     batch_name = batch_name or f"{year}년 {month}월"
     run_time = datetime(year, month, 1, 0, 30, 0)
-    logger.info(f"🚀 [{batch_name}] 배치 시작 {run_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    logger.info(f"🚀 [{batch_name}] 스케줄러에 의해 배치 루틴 호출됨")
 
     attempt = 0
     success = False
@@ -48,6 +56,24 @@ class SchedulerManager:
     """여러 개의 배치 작업을 관리하는 스케줄러"""
 
     def __init__(self):
+        os.makedirs(SCHEDULER_LOG_DIR, exist_ok=True)
+
+        log_file_path = os.path.join(SCHEDULER_LOG_DIR, "scheduler_{time:YYYY-MM-DD}.log")
+
+        # 기본 핸들러 제거 후 스케줄러 전용 로그 설정 적용
+        logger.remove()
+        logger.add(
+            log_file_path,
+            rotation="00:00",
+            retention="30 days",
+            level="INFO",
+            encoding="utf-8",
+            format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {message}",
+            enqueue=True  # 멀티쓰레드 안전성 확보
+        )
+
+        print(f"DEBUG: Scheduler Log will be saved at -> {log_file_path}")
+
         self.scheduler = BackgroundScheduler(
             jobstores={'default': MemoryJobStore()},
             timezone='Asia/Seoul'
@@ -88,7 +114,7 @@ class SchedulerManager:
             'dry_run': dry_run
         }
 
-        #job 추가
+        # job 추가
         self.scheduler.add_job(
             run_monthly_batch_task,
             'cron',
@@ -111,7 +137,8 @@ class SchedulerManager:
         """등록된 배치 작업을 제거합니다."""
         if self.scheduler.get_job(job_id):
             self.scheduler.remove_job(job_id)
-            del self.job_configs[job_id]
+            if job_id in self.job_configs:
+                del self.job_configs[job_id]
             logger.info(f"🗑️  job 제거: {job_id}")
         else:
             logger.warning(f"⚠️  job을 찾을 수 없습니다: {job_id}")
@@ -160,6 +187,19 @@ class SchedulerManager:
         else:
             return None
 
+    # 라이브에서 호출 절대 금지
+    def trigger_now(self, job_id: str):
+        """등록된 job을 스케줄 상관없이 지금 즉시 한 번 실행(테스트용)"""
+        job = self.scheduler.get_job(job_id)
+        if job:
+            logger.info(f"⚡ [테스트] Job {job_id} 즉시 실행 시작")
+            # 스케줄러 스레드와 별개로 현재 스레드에서 즉시 실행
+            job.func(**job.kwargs)
+            return True
+        else:
+            logger.error(f"❌ 해당 ID의 Job이 없습니다: {job_id}")
+            return False
+
 
 @st.cache_resource
 def get_scheduler_manager():
@@ -167,4 +207,3 @@ def get_scheduler_manager():
     manager = SchedulerManager()
     manager.start()
     return manager
-

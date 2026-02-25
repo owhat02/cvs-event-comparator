@@ -7,14 +7,15 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 from batch.script.crawl_batch_script import get_next_month_data_batch
+from datetime import datetime
 
 TARGET_YEAR = 2026
 TARGET_MONTH = 2
 
 print(f"Running batch test for {TARGET_YEAR}-{TARGET_MONTH} (dry-run)")
-get_next_month_data_batch(TARGET_YEAR, TARGET_MONTH, dry_run=False)
+get_next_month_data_batch(TARGET_YEAR, TARGET_MONTH, dry_run=False, run_time=datetime.now())
 
-log_dir = os.path.join(PROJECT_ROOT, 'crawl_batch_log', f"{str(TARGET_YEAR)[-2:]}_{TARGET_MONTH}")
+log_dir = os.path.join(PROJECT_ROOT, 'batch', 'batch_script_log', f"{str(TARGET_YEAR)[-2:]}_{TARGET_MONTH}")
 print('Expected log dir:', log_dir)
 print('Exists:', os.path.exists(log_dir))
 if os.path.exists(log_dir):

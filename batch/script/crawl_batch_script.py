@@ -1,39 +1,37 @@
-"""
-배치 스케줄러에 의해 호출되는 스크립트입니다.
-지정된 연/월 정보를 바탕으로 편의점 4사 크롤링 및 데이터 통합을 수행합니다.
-"""
 import os
 import sys
 import importlib
 from datetime import datetime
 
-# 최상위 폴더에서 탐색하도록 설정
+# 최상위 폴더 설정
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, PROJECT_ROOT)
 
-
-def prepare_env():
-    """필요한 디렉토리 자동 생성"""
-    os.makedirs(os.path.join(PROJECT_ROOT, 'data'), exist_ok=True)
-    os.makedirs(os.path.join(PROJECT_ROOT, 'crawl_batch_log'), exist_ok=True)
+# 로그 저장 기본 경로 (루트/batch/batch_script)
+LOG_BASE_DIR = os.path.join(PROJECT_ROOT, 'batch', 'batch_script_log')
 
 
-def get_log_dir_for_time(t: datetime):
-    """YY_MM 형식의 로그 디렉토리 경로 반환"""
-    yy = t.year % 100
-    m = t.month
+def get_log_path(run_time: datetime):
+    """실행 시점(run_time)을 기준으로 단 하나의 로그 파일 경로를 생성"""
+
+    yy = run_time.year % 100
+    m = run_time.month
     dirname = f"{yy}_{m}"
-    dirpath = os.path.join(PROJECT_ROOT, 'crawl_batch_log', dirname)
+    dirpath = os.path.join(LOG_BASE_DIR, dirname)
+
+    # 폴더는 여기서 딱 한 번 생성
     os.makedirs(dirpath, exist_ok=True)
-    return dirpath
+
+    fname = run_time.strftime('batch_script_%Y%m%d_%H%M%S.log')
+    return os.path.join(dirpath, fname)
 
 
 def write_log(msg: str, run_time: datetime):
-    """지정된 실행 시점에 맞춰 파일 로그 기록"""
-    log_dir = get_log_dir_for_time(run_time)
-    fname = run_time.strftime('batch_%Y%m%d_%H%M%S.log')
-    path = os.path.join(log_dir, fname)
-    timestamp = run_time.strftime('%Y-%m-%d %H:%M:%S')
+    """전달받은 run_time 기준의 로그 파일에 메시지 추가"""
+    path = get_log_path(run_time)
+
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
     line = f"[{timestamp} KST] {msg}\n"
     with open(path, 'a', encoding='utf-8') as f:
         f.write(line)
@@ -41,7 +39,9 @@ def write_log(msg: str, run_time: datetime):
 
 
 def make_datetime(fixed_dt: datetime):
-    """스크래퍼 모듈 내의 datetime.now()를 배치 실행 시점으로 패칭하기 위한 클래스"""
+    """스크래퍼 내부의 datetime.now()를 배치 시점으로 고정"""
+    if fixed_dt is None:
+        fixed_dt = datetime.now()
 
     class DateTime:
         @staticmethod
@@ -51,18 +51,26 @@ def make_datetime(fixed_dt: datetime):
     return DateTime
 
 
-def get_next_month_data_batch(year: int, month: int, dry_run: bool = False, run_time: datetime = None):
+def get_next_month_data_batch(year: int, month: int, run_time: datetime, dry_run: bool = False) -> bool:
     """
-    스케줄러로부터 인자를 받아 실행되는 메인 배치 함수
+    메인 배치 함수
     """
-    prepare_env()
-    if run_time is None:
-        run_time = datetime.now()
+    # 현재 작업 디렉토리를 프로젝트 루트로 변경
+    os.chdir(PROJECT_ROOT)
 
+    data_dir = os.path.join(PROJECT_ROOT, 'data')
+
+    os.makedirs(data_dir, exist_ok=True)
+
+    # 환경변수로 data 폴더 경로 전달
+    os.environ['DATA_DIR'] = data_dir
+
+    # 2. 시작 로그 기록
     write_log('=== BATCH START ===', run_time)
-    write_log(f'Target: {year}-{month} | Execute At: {run_time}', run_time)
+    write_log(f'Target Month: {year}-{month} | Batch ID Time: {run_time.strftime("%H:%M:%S")}', run_time)
+    write_log(f'Data directory: {data_dir}', run_time)
 
-    # 스크래퍼 모듈
+    # 3. 스크래퍼 패칭
     mods = [
         'scraper.seven_eleven_scraper',
         'scraper.cu_scraper',
@@ -79,7 +87,7 @@ def get_next_month_data_batch(year: int, month: int, dry_run: bool = False, run_
         except Exception as e:
             write_log(f'Failed to patch {m}: {e}', run_time)
 
-    # 크롤링 실행
+    # 4. 크롤링 실행
     if dry_run:
         write_log('Dry run enabled: Skipping actual crawler execution.', run_time)
     else:
@@ -115,10 +123,10 @@ def get_next_month_data_batch(year: int, month: int, dry_run: bool = False, run_
         except Exception as e:
             write_log(f'emart24 failed: {e}', run_time)
 
-    #데이터 후처리 (Cleaning & Categorizing)
+    # 5. 후처리
     try:
-        from utils.data_cleaner import clean_and_merge
-        clean_and_merge()
+        from utils.data_cleaner_batch import clean_and_merge_batch
+        clean_and_merge_batch()
         write_log('Finished: data_cleaner', run_time)
 
         from utils.data_categorize import run_categorization
