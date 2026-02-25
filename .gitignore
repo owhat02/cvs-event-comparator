@@ -26,6 +26,9 @@ env/
 Thumbs.db
 *.log
 
+# 배치 로그는 깃이그노어에서 제외(오류 발생시 확인 필요)
+!crawl_batch_log/**
+
 # 개인 문서
 prd.md
 
