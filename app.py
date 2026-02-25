@@ -4,6 +4,7 @@ import pandas as pd
 from datetime import datetime
 
 from batch.batch_scheduler_manager import get_scheduler_manager
+from utils.chatbot import show_chatbot
 
 st.set_page_config(page_title="편의점 행사 대시보드", page_icon="🏪", layout="wide")
 scheduler = get_scheduler_manager()
@@ -71,6 +72,9 @@ pg = st.navigation({
 
 # 사이드바 실행
 show_sidebar()
+
+# 챗봇 실행
+show_chatbot()
 
 # 페이지 실행
 pg.run()
