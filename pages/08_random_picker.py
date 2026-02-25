@@ -43,14 +43,14 @@ if not df.empty:
 
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # --- 중앙 실행 버튼 ---
-    _, btn_col, _ = st.columns([1, 1, 1])
-    with btn_col:
+    # --- 중앙 실행 버튼 및 결과 출력 영역 ---
+    col_l, col_c, col_r = st.columns([1, 2, 1])
+    
+    with col_c:
         pick_button = st.button("🎁 럭키박스 열기!", use_container_width=True, type="primary")
 
     st.markdown("---")
 
-    # --- 하단 결과 출력 영역 ---
     if pick_button:
         # 필터링
         filtered_df = df[df['brand'].isin(selected_brand)] if selected_brand else df
@@ -63,14 +63,14 @@ if not df.empty:
                 picked_item = filtered_df.sample(n=1).iloc[0]
                 
                 st.balloons()
-                st.success(f"🎉 오늘의 추천 상품은 **{picked_item['name']}** 입니다!")
                 
-                # 이미지 URL 처리
-                img_url = picked_item['img_url'] if pd.notna(picked_item['img_url']) else "https://via.placeholder.com/250?text=No+Image"
-                
-                # 결과 카드 (중앙 정렬을 위해 다시 컬럼 사용)
-                _, res_col, _ = st.columns([1, 2, 1])
-                with res_col:
+                # 결과 출력 (버튼과 동일한 너비의 중앙 컬럼 사용)
+                with col_c:
+                    st.success(f"🎉 오늘의 추천 상품은 **{picked_item['name']}** 입니다!")
+                    
+                    # 이미지 URL 처리
+                    img_url = picked_item['img_url'] if pd.notna(picked_item['img_url']) else "https://via.placeholder.com/250?text=No+Image"
+                    
                     st.markdown(f"""
                         <div style="background-color: #161b22; border: 2px solid #58a6ff; border-radius: 20px; padding: 30px; text-align: center;">
                             <div style="background: white; padding: 10px; border-radius: 15px; display: inline-block; margin-bottom: 20px;">
@@ -88,16 +88,18 @@ if not df.empty:
                         </div>
                     """, unsafe_allow_html=True)
         else:
-            st.warning("선택하신 조건에 맞는 상품이 없습니다. 필터를 조정해 보세요!")
+            with col_c:
+                st.warning("선택하신 조건에 맞는 상품이 없습니다. 필터를 조정해 보세요!")
     else:
-        # 대기 상태
-        st.markdown("""
-            <div style="height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px dashed #30363d; border-radius: 20px; color: #8b949e;">
-                <div style="font-size: 4rem; margin-bottom: 10px;">🎁</div>
-                <h3>어떤 상품이 나올까요?</h3>
-                <p>위의 버튼을 눌러 럭키박스를 열어보세요!</p>
-            </div>
-        """, unsafe_allow_html=True)
+        # 대기 상태 (버튼과 동일한 너비의 중앙 컬럼 사용)
+        with col_c:
+            st.markdown("""
+                <div style="height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px dashed #30363d; border-radius: 20px; color: #8b949e;">
+                    <div style="font-size: 4rem; margin-bottom: 10px;">🎁</div>
+                    <h3>어떤 상품이 나올까요?</h3>
+                    <p>위의 버튼을 눌러 럭키박스를 열어보세요!</p>
+                </div>
+            """, unsafe_allow_html=True)
 
 else:
     st.error("데이터를 불러올 수 없습니다. data/categorized_data.csv 파일을 확인해주세요.")
