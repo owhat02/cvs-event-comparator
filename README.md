@@ -12,38 +12,38 @@
 ```text
 conv-dashboard/
 ┃
-┣━━ 📄 .gitignore                   			# Git 관리 제외 목록 (데이터, 캐시 등)
-┣━━ 📄 requirements.txt            		# 프로젝트 실행을 위한 라이브러리 목록
-┣━━ 📄 README.md                	 	# 프로젝트 개요 및 사용 가이드
-┣━━ 📄 app.py                    			# [Main] 통합 실행 및 대시보드 엔진
+┣━━ 📄 .gitignore                   	 # Git 관리 제외 목록 (데이터, 캐시 등)
+┣━━ 📄 requirements.txt                  # 프로젝트 실행을 위한 라이브러리 목록
+┣━━ 📄 README.md                         # 프로젝트 개요 및 사용 가이드
+┣━━ 📄 app.py                            # [Main] 통합 실행 및 대시보드 엔진
 ┃
-┣━━ 📂 pages/                       			# [페이지]
-┃   ┣━━ 📄 00_home.py                # 메인보드
-┃   ┣━━ 📄 01_overall_summary.py     # 전체 상품 통합 정보 
-┃   ┣━━ 📄 02_brand_comparison.py    # 브랜드별 특징 분석
-┃   ┣━━ 📄 03_best_value.py          # 가성비 아이템 비교
-┃   ┣━━ 📄 04_budget_combination.py  # 예산 맞춤 최적의 상품 조합 생성기
-┃   ┣━━ 📄 05_diet_guide.py			 # 다이어트 식단 가이드 
-┃   ┣━━ 📄 06_night_snack_guide.py    # 야식 & 안주 가이드 
-┃   ┣━━ 📄 07_convenience_store_map.py	# 편의점 지점 지도 
-┃   ┣━━ 📄 08_random_picker.py                   # 럭키 박스
+┣━━ 📂 pages/                            # [페이지]
+┃   ┣━━ 📄 00_home.py                    # 메인보드
+┃   ┣━━ 📄 01_overall_summary.py         # 전체 상품 통합 정보 
+┃   ┣━━ 📄 02_brand_comparison.py        # 브랜드별 특징 분석
+┃   ┣━━ 📄 03_best_value.py              # 가성비 아이템 비교
+┃   ┣━━ 📄 04_budget_combination.py      # 예산 맞춤 최적의 상품 조합 생성기
+┃   ┣━━ 📄 05_diet_guide.py              # 다이어트 식단 가이드 
+┃   ┣━━ 📄 06_night_snack_guide.py       # 야식 & 안주 가이드 
+┃   ┣━━ 📄 07_convenience_store_map.py   # 편의점 지점 지도 
+┃   ┣━━ 📄 08_random_picker.py           # 럭키 박스
 ┃   ┣━━ 📄 09_jackpot_game
 ┃
-┣━━ 📂 scraper/                     			# [수집] 브랜드별 크롤러 패키지
-┃   ┣━━ 📄 __init__.py           		# 패키지 초기화 파일
-┃   ┣━━ 📄 cu_scraper.py         		# CU 데이터 수집 로직
-┃   ┣━━ 📄 gs25_scraper.py          		# GS25 데이터 수집 로직
-┃   ┣━━ 📄 seven_eleven_scraper.py  	# 세븐일레븐 데이터 수집 로직
-┃   ┗━━ 📄 emart24_scraper.py       		# 이마트24 데이터 수집 로직
+┣━━ 📂 scraper/                          # [수집] 브랜드별 크롤러 패키지
+┃   ┣━━ 📄 __init__.py                   # 패키지 초기화 파일
+┃   ┣━━ 📄 cu_scraper.py                 # CU 데이터 수집 로직
+┃   ┣━━ 📄 gs25_scraper.py               # GS25 데이터 수집 로직
+┃   ┣━━ 📄 seven_eleven_scraper.py       # 세븐일레븐 데이터 수집 로직
+┃   ┗━━ 📄 emart24_scraper.py            # 이마트24 데이터 수집 로직
 ┃
-┣━━ 📂 utils/                       			# [도구] 데이터 처리 공용 유틸리티
+┣━━ 📂 utils/                            # [도구] 데이터 처리 공용 유틸리티
 ┃   ┣━━ 📄 __init__.py
-┃   ┣━━ 📄 data_cleaner.py         		# 데이터 정제 및 통합 (CSV 병합 등)
-┃   ┣━━ 📄 data_categorize.py       		# 키워드 기반 카테고리 자동 분류
-┃   ┣━━ 📄 data_visualization.ipynb 		# 데이터 시각화 분석
-┃   ┣━━ 📄 brandname_visual		# 브랜드별 행사 상품 비율 시각화
-┃   ┗━━ 📄 graph.py				# 편의점별 가격 분포 비교 그래프 
-┃   ┗━━ 📄 chatbot.py			# 상품 도우미 챗봇
+┃   ┣━━ 📄 data_cleaner.py               # 데이터 정제 및 통합 (CSV 병합 등)
+┃   ┣━━ 📄 data_categorize.py            # 키워드 기반 카테고리 자동 분류
+┃   ┣━━ 📄 data_visualization.ipynb      # 데이터 시각화 분석
+┃   ┣━━ 📄 brandname_visual              # 브랜드별 행사 상품 비율 시각화
+┃   ┗━━ 📄 graph.py                      # 편의점별 가격 분포 비교 그래프 
+┃   ┗━━ 📄 chatbot.py                    # 상품 도우미 챗봇
 ┃
 ┣━━ 📂 assets/                 			# [Asset] 브랜드 로고 및 이미지 자원
 ┃   ┣━━ 🖼️ logo_cu.png
@@ -58,8 +58,8 @@ conv-dashboard/
     ┣━━ 📄 GS25_{YYMMDD}.csv
     ┣━━ 📄 7Eleven_{YYMMDD}.csv
     ┣━━ 📄 emart24_{YYMMDD}.csv
-    ┣━━ 📄 cleaned_data.csv   		# 정제된 통합 데이터
-    ┗━━ 📄 categorized_data.csv 		# 카테고리 분류 데이터
+    ┣━━ 📄 cleaned_data.csv            # 정제된 통합 데이터
+    ┗━━ 📄 categorized_data.csv        # 카테고리 분류 데이터
 ```
 
 ---
