@@ -101,6 +101,3 @@ if not df.empty:
 
 else:
     st.error("데이터를 불러올 수 없습니다. data/categorized_data.csv 파일을 확인해주세요.")
-
-else:
-    st.error("데이터를 불러올 수 없습니다. data/categorized_data.csv 파일을 확인해주세요.")
