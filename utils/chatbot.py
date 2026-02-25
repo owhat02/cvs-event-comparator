@@ -20,46 +20,66 @@ def load_chatbot_data():
         return pd.read_csv(file_path)
     return None
 
-# ★ 핵심 1: 검색 능력을 대폭 강화 (문장에서 불용어 빼고 키워드만 쏙쏙 뽑아 검색)
-def get_chatbot_context(query, df):
+# ★ 핵심 개선: 맥락을 이해하고 '추천', '다른거'에 유연하게 대응하는 검색 로직
+def get_chatbot_context(query, df, messages):
     if df is None or df.empty:
         return "데이터베이스를 찾을 수 없습니다."
     
-    # 1. 일상적인 대화 단어(불용어) 걸러내기
-    stopwords = ['알려줘', '뭐있어', '뭐가', '있어', '주세요', '찾아줘', '어떤', '가장', '추천해줘', '은', '는', '이', '가', '에서', '파는', '?']
-    query_cleaned = query
+    # 1. "다른거", "더 알려줘" 같은 이어지는 질문 처리 (이전 맥락 합치기)
+    search_query = query
+    if any(word in query for word in ['다른', '더', '또', '추천']):
+        user_msgs = [m['content'] for m in messages if m['role'] == 'user']
+        # 이전 질문이 있다면 현재 질문과 합쳐서 검색 힌트로 사용
+        if len(user_msgs) > 1:
+            search_query = user_msgs[-2] + " " + query
+            
+    # 2. 1+1, 2+1 등 특정 이벤트 필터링
+    temp_df = df.copy()
+    if '1+1' in search_query:
+        temp_df = temp_df[temp_df['event'].astype(str).str.contains('1\+1', regex=True)]
+    if '2+1' in search_query:
+        temp_df = temp_df[temp_df['event'].astype(str).str.contains('2\+1', regex=True)]
+        
+    # 3. 불용어(검색에 방해되는 일상어) 제거
+    stopwords = ['알려줘', '뭐있어', '뭐가', '있어', '주세요', '찾아줘', '어떤', '가장', '추천해줘', '추천', 
+                 '행사', '중인거', '다른거', '다른', '더', '또', '거', '보여줘', '은', '는', '이', '가', 
+                 '에서', '파는', '?', '중에', '중에서', '상품', '제품']
+    
+    query_cleaned = search_query
     for word in stopwords:
         query_cleaned = query_cleaned.replace(word, ' ')
         
-    keywords = [k for k in query_cleaned.split() if k.strip()]
+    # 이벤트 키워드도 검색어에서는 제외
+    keywords = [k for k in query_cleaned.split() if k.strip() and k not in ['1+1', '2+1']]
     
-    if not keywords:
-        return "구체적인 브랜드나 상품명, 행사 종류를 입력해 주세요."
-
-    # 2. 브랜드, 이름, 카테고리, 행사를 합친 텍스트에서 키워드가 포함되어 있는지 '모두' 검사 (AND 조건)
-    combined_text = df['brand'].astype(str) + " " + df['name'].astype(str) + " " + df['category'].astype(str) + " " + df['event'].astype(str)
-    
-    mask = pd.Series(True, index=df.index)
-    for kw in keywords:
-        mask = mask & combined_text.str.contains(kw, case=False, na=False)
-        
-    related = df[mask].head(20) # AI에게 줄 힌트를 20개까지 넉넉히 제공
-    
-    # 3. 만약 AND 검색 결과가 없으면, 키워드 중 하나라도 들어간 것(OR 조건)으로 재검색
-    if related.empty:
-        or_mask = pd.Series(False, index=df.index)
+    # 4. 키워드가 남았다면 조건 검색 (예: "GS25 우유 추천" -> GS25, 우유 검색)
+    if keywords:
+        combined_text = temp_df['brand'].astype(str) + " " + temp_df['name'].astype(str) + " " + temp_df['category'].astype(str)
+        mask = pd.Series(True, index=temp_df.index)
         for kw in keywords:
-            or_mask = or_mask | combined_text.str.contains(kw, case=False, na=False)
-        related = df[or_mask].head(10)
+            mask = mask & combined_text.str.contains(kw, case=False, na=False)
+        related = temp_df[mask]
         
-    # 최종적으로 못 찾은 경우
-    if related.empty:
-        return "해당 조건에 맞는 행사 상품이 현재 데이터에 없습니다."
-    
-    # AI가 읽기 편하게 정리해서 전달
+        # 교집합이 없으면 합집합(OR)으로 재검색
+        if related.empty:
+            or_mask = pd.Series(False, index=temp_df.index)
+            for kw in keywords:
+                or_mask = or_mask | combined_text.str.contains(kw, case=False, na=False)
+            related = temp_df[or_mask]
+    else:
+        # 5. 특정 키워드 없이 "추천해줘", "1+1 다른거" 라고만 했을 경우 전체(혹은 필터된) 데이터 사용
+        related = temp_df
+        
+    # ★ 핵심 2: 매번 같은 대답을 하지 않도록 무작위(Random)로 15개를 섞어서 뽑아옵니다.
+    if not related.empty:
+        related = related.sample(n=min(15, len(related)))
+    else:
+        return "조건에 맞는 행사 상품이 현재 없습니다."
+        
+    # AI가 읽을 수 있도록 문자열로 변환
     context = ""
     for _, row in related.iterrows():
-        context += f"[{row['brand']}] {row['name']} | 가격: {row['price']}원 | 행사: {row['event']} | 분류: {row['category']}\n"
+        context += f"[{row['brand']}] {row['name']} | {row['price']}원 | {row['event']} | {row['category']}\n"
     
     return context
 
@@ -143,7 +163,7 @@ def show_chatbot():
         
         with chat_container:
             if not st.session_state.messages:
-                st.info("무엇이든 물어보세요! 예: 'GS25 1+1 음료 알려줘'")
+                st.info("무엇이든 물어보세요! 예: 'GS25 1+1 추천해줘'")
             
             for message in st.session_state.messages:
                 with st.chat_message(message["role"]):
@@ -159,17 +179,21 @@ def show_chatbot():
                 with chat_container:
                     with st.chat_message("assistant"):
                         df = load_chatbot_data()
-                        context = get_chatbot_context(prompt, df)
+                        # ★ 검색 시 이전 대화 기록(messages)을 함께 넘겨줍니다.
+                        context = get_chatbot_context(prompt, df, st.session_state.messages)
                         
-                        # ★ 핵심 2: AI에게 "주어진 데이터로만 대답하라"고 강력하게 지시하는 프롬프트
-                        system_prompt = f"""당신은 편의점 행사 도우미입니다. 
-아래 제공된 [검색된 데이터]에 있는 상품 정보만을 사용해서 답변하세요.
-만약 [검색된 데이터]가 비어있거나 '데이터가 없습니다'라고 나와있다면, 절대 정보를 지어내지 말고 "제가 가진 행사 데이터에서는 해당 상품을 찾을 수 없습니다."라고 솔직하게 답변하세요.
-질문과 무관한 내용은 답변하지 마세요. 답변 시 한글만 사용하세요(한자 불가).
+                        # ★ 핵심 3: 챗봇이 사람처럼 대화하도록 프롬프트 수정
+                        system_prompt = f"""당신은 센스있고 친절한 편의점 행사 도우미입니다. 
+                            아래 제공된 [검색된 데이터]를 바탕으로 자연스럽게 대화하듯 답변하세요.
 
-[검색된 데이터]
-{context}
-"""
+                            - 사용자가 "추천해줘", "행사 중인 거", "다른 거"라고 물어보면, 데이터 중에서 2~3가지를 골라 왜 추천하는지(예: 간식으로 좋아요, 가성비가 좋아요 등) 가볍게 덧붙여서 매력적으로 추천해주세요.
+                            - 만약 [검색된 데이터]에 '조건에 맞는 상품이 없다'고 나오면, "앗, 지금은 원하시는 상품이 없는 것 같아요. 대신 이런 건 어떠세요?" 라며 자연스럽게 대화를 이어가세요.
+                            - 절대로 데이터를 지어내지 말고, 엑셀 데이터에 있는 정확한 상품명과 가격, 행사를 말하세요.
+                            - 답변 시 한글만 사용하세요(한자 사용 금지).
+
+                            [검색된 데이터]
+                            {context}
+                        """
                         
                         message_placeholder = st.empty()
                         full_response = ""
