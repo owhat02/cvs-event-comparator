@@ -4,6 +4,19 @@ import random
 import os
 import time
 
+# 브랜드별 고유 컬러 반환 함수
+def get_brand_color(brand):
+    brand_colors = {
+        "CU": "#652D90",
+        "GS25": "#0054A6",
+        "7-Eleven": "#008061",
+        "7Eleven": "#008061",
+        "세븐일레븐": "#008061",
+        "emart24": "#FFB81C",
+        "이마트24": "#FFB81C"
+    }
+    return brand_colors.get(brand, "#8b949e")
+
 st.set_page_config(page_title="럭키박스", page_icon="🎁", layout="wide")
 
 # CSS 로드
@@ -80,8 +93,9 @@ if not df.empty:
                             <div style="font-size: 1.5rem; color: #ff6b6b; font-weight: bold; margin-bottom: 10px;">
                                 {picked_item['event']} | {int(picked_item['price']):,}원
                             </div>
-                            <div style="color: #8b949e; font-size: 1.2rem;">
-                                📍 {picked_item['brand']} ({picked_item['category']})
+                            <div style="margin-bottom: 10px;">
+                                <span style="color:{get_brand_color(picked_item['brand'])}; background:{get_brand_color(picked_item['brand'])}15; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:1.1rem;">📍 {picked_item['brand']}</span>
+                                <span style="color: #8b949e; font-size: 1.1rem; margin-left: 5px;">({picked_item['category']})</span>
                             </div>
                             <hr style="border-color: #30363d; margin: 20px 0;">
                             <p style="color: #58a6ff; font-weight: bold; font-size: 1.1rem;">지금 바로 집 앞 {picked_item['brand']}(으)로 달려가세요! 🏃‍♂️</p>

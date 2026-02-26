@@ -72,47 +72,39 @@ class SchedulerManager:
             enqueue=True  # 멀티쓰레드 안전성 확보
         )
 
-        print(f"DEBUG: Scheduler Log will be saved at -> {log_file_path}")
-
         self.scheduler = BackgroundScheduler(
             jobstores={'default': MemoryJobStore()},
             timezone='Asia/Seoul'
         )
         self.job_configs = {}  # job_id별 설정 저장
 
-    def add_job(self, day: int, hour: int, minute: int,year: int = None, month: int = None,
+    def add_job(self, day: int, hour: int, minute: int, year: int = None, month: int = None,
                 batch_name: str = None, job_id: str = None, dry_run: bool = False):
-        """
-        새로운 배치 작업을 등록 부(커스텀 해서 사용가능)
+        """새로운 배치 작업을 등록 (이미 존재하면 건너뜀)"""
 
-        Args:
-            day: 실행 날짜 (1-31, * 사용 가능)
-            hour: 실행 시간 (0-23)
-            minute: 실행 분 (0-59)
-            batch_name: 배치 이름 (기본값: "연도월")
-            job_id: job 식별자 (기본값: "batch_{year}_{month}_{day}_{hour}_{minute}")
-            dry_run: True이면 크롤링 건너뜀
-        """
         now = datetime.now()
         target_year = year or now.year
         target_month = month or now.month
         batch_name = batch_name or f"{target_year}년 {target_month}월"
         job_id = job_id or f"batch_{target_year}_{target_month}_{day}_{hour}_{minute}"
 
-        # 기존 job이 있으면 제거
         if self.scheduler.get_job(job_id):
-            self.scheduler.remove_job(job_id)
-            logger.info(f"⚠️  기존 job 제거: {job_id}")
+            return
 
-        # job 설정 저장
+        log_file_path = os.path.join(SCHEDULER_LOG_DIR, f"scheduler_{now.strftime('%Y-%m-%d')}.log")
+        already_logged = False
+
+        if os.path.exists(log_file_path):
+            with open(log_file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+                if f"✅ 배치 등록 완료: {job_id}" in content:
+                    already_logged = True
+
+        # 잡이 없을 때만 아래 설정을 저장하고 로그 남김
         self.job_configs[job_id] = {
-            'day': day,
-            'hour': hour,
-            'minute': minute,
-            'year': year,
-            'month': month,
-            'batch_name': batch_name,
-            'dry_run': dry_run
+            'day': day, 'hour': hour, 'minute': minute,
+            'year': year, 'month': month,
+            'batch_name': batch_name, 'dry_run': dry_run
         }
 
         # job 추가
@@ -125,41 +117,53 @@ class SchedulerManager:
             id=job_id,
             replace_existing=True,
             kwargs={
-                'year': year,
-                'month': month,
+                'year': target_year,
+                'month': target_month,
                 'batch_name': batch_name,
                 'dry_run': dry_run
             }
         )
-        logger.info(f"✅ 배치 등록 완료: {job_id}")
-        logger.info(f"   매월 {day}일 {hour:02d}:{minute:02d} - [{batch_name}] (dry_run={dry_run})")
+
+        if not already_logged:
+            logger.info(f"✅ 배치 등록 완료: {job_id}")
+            logger.info(f"   매월 {day}일 {hour:02d}:{minute:02d} - [{batch_name}] (dry_run={dry_run})")
 
     def remove_job(self, job_id: str):
-        """등록된 배치 작업을 제거합니다."""
         if self.scheduler.get_job(job_id):
             self.scheduler.remove_job(job_id)
             if job_id in self.job_configs:
                 del self.job_configs[job_id]
             logger.info(f"🗑️  job 제거: {job_id}")
-        else:
-            logger.warning(f"⚠️  job을 찾을 수 없습니다: {job_id}")
 
     def start(self):
-        """스케줄러를 시작합니다."""
+        """스케줄러를 시작합니다 (오늘 이미 시작된 로그가 있으면 생략)"""
         if not self.scheduler.running:
             self.scheduler.start()
-            logger.info("🟢 스케줄러 시작됨")
+
+            now = datetime.now()
+            already_started_logged = False
+            if os.path.exists(SCHEDULER_LOG_DIR):
+                for file in os.listdir(SCHEDULER_LOG_DIR):
+                    if file.startswith(f"scheduler_{now.strftime('%Y-%m-%d')}") and file.endswith(".log"):
+                        try:
+                            with open(os.path.join(SCHEDULER_LOG_DIR, file), "r", encoding="utf-8") as f:
+                                if "🟢 스케줄러 시작됨" in f.read():
+                                    already_started_logged = True
+                                    break
+                        except Exception:
+                            pass
+
+            if not already_started_logged:
+                logger.info("🟢 스케줄러 시작됨")
         else:
-            logger.info("⚠️  스케줄러가 이미 실행 중입니다")
+            pass
 
     def stop(self):
-        """스케줄러를 중지"""
         if self.scheduler.running:
             self.scheduler.shutdown()
             logger.info("🛑 스케줄러 중지됨")
 
     def get_jobs(self):
-        """Batch Job 리턴."""
         jobs = self.scheduler.get_jobs()
         job_details = []
         for job in jobs:
@@ -175,31 +179,13 @@ class SchedulerManager:
             "jobs": job_details
         }
 
-    def get_job_info(self, job_id: str):
-        """특정 job의 상세 정보 리턴."""
-        job = self.scheduler.get_job(job_id)
-        if job:
-            return {
-                "id": job.id,
-                "trigger": str(job.trigger),
-                "next_run": job.next_run_time.strftime('%Y-%m-%d %H:%M:%S') if job.next_run_time else "N/A",
-                "config": self.job_configs.get(job_id, {})
-            }
-        else:
-            return None
-
-    # 라이브에서 호출 절대 금지
     def trigger_now(self, job_id: str):
-        """등록된 job을 스케줄 상관없이 지금 즉시 한 번 실행(테스트용)"""
         job = self.scheduler.get_job(job_id)
         if job:
             logger.info(f"⚡ [테스트] Job {job_id} 즉시 실행 시작")
-            # 스케줄러 스레드와 별개로 현재 스레드에서 즉시 실행
             job.func(**job.kwargs)
             return True
-        else:
-            logger.error(f"❌ 해당 ID의 Job이 없습니다: {job_id}")
-            return False
+        return False
 
 
 @st.cache_resource

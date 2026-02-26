@@ -2,6 +2,19 @@ import streamlit as st
 import pandas as pd
 import os
 
+# 브랜드별 고유 컬러 반환 함수
+def get_brand_color(brand):
+    brand_colors = {
+        "CU": "#652D90",
+        "GS25": "#0054A6",
+        "7-Eleven": "#008061",
+        "7Eleven": "#008061",
+        "세븐일레븐": "#008061",
+        "emart24": "#FFB81C",
+        "이마트24": "#FFB81C"
+    }
+    return brand_colors.get(brand, "#8b949e")
+
 st.set_page_config(page_title="가성비 비교", page_icon="💎", layout="wide")
 
 # CSS 로드
@@ -103,8 +116,9 @@ if not df.empty:
                     st.image(img_url, width=120)
                 with c2:
                     st.markdown(f"### {row['name']}")
+                    brand_color = get_brand_color(row['brand'])
                     st.markdown(
-                        f"📍 **{row['brand']}** | {row['category']} | <span class='event-tag'>{row['event']}</span>",
+                        f"<span style='color:{brand_color}; background:{brand_color}15; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:0.8rem;'>📍 {row['brand']}</span> | {row['category']} | <span class='event-tag'>{row['event']}</span>",
                         unsafe_allow_html=True)
                 with c3:
                     st.markdown(f"<h2 style='color:#ff6b6b; margin-bottom:0;'>{row['discount_rate']} 할인</h2>",

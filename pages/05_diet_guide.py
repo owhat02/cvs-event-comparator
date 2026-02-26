@@ -3,6 +3,19 @@ import pandas as pd
 import os
 from datetime import datetime
 
+# 브랜드별 고유 컬러 반환 함수
+def get_brand_color(brand):
+    brand_colors = {
+        "CU": "#652D90",
+        "GS25": "#0054A6",
+        "7-Eleven": "#008061",
+        "7Eleven": "#008061",
+        "세븐일레븐": "#008061",
+        "emart24": "#FFB81C",
+        "이마트24": "#FFB81C"
+    }
+    return brand_colors.get(brand, "#8b949e")
+
 # 1. 페이지 설정
 st.set_page_config(page_title="다이어트 & 식단 가이드", page_icon="🏋️", layout="wide")
 
@@ -170,7 +183,10 @@ if not df.empty:
                             <span style="font-size: 0.85rem; color: #ff6b6b; font-weight: bold; margin-left: 5px;">({row['discount_rate']}↓)</span>
                         </div>
                         <div class="unit-price-text">개당 <b>{row['unit_price']:,}원</b></div>
-                        <div class="brand-text">📍 {row['brand']} | <span class="event-tag">{row['event']}</span></div>
+                        <div style="margin-top: 5px;">
+                            <span style="color:{get_brand_color(row['brand'])}; background:{get_brand_color(row['brand'])}15; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:0.8rem;">📍 {row['brand']}</span>
+                            <span class="event-tag" style="margin-left: 5px;">{row['event']}</span>
+                        </div>
                     </div>
                 """, unsafe_allow_html=True)
 
