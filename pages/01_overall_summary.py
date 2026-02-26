@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import os
 from datetime import datetime
+from utils.cart import init_cart, render_cart_button, render_floating_cart
 
 st.set_page_config(page_title="전체 요약", page_icon="🏪", layout="wide")
 
@@ -32,6 +33,9 @@ def get_data():
     return df.drop_duplicates(subset=['name', 'event', 'brand'])
 
 df = get_data()
+
+init_cart()
+render_floating_cart()
 
 st.title(f"🏪 {datetime.now().strftime('%Y년 %m월')} 편의점 행사 정보 통합 보드")
 
@@ -121,6 +125,7 @@ if not df.empty:
                         <div class="brand-text">📍 {row['brand']} | <span class="event-tag">{row['event']}</span></div>
                     </div>
                 """, unsafe_allow_html=True)
+                render_cart_button(row, f"cart_summary_{idx}")
 
         # 페이지네이션
         st.markdown("---")
