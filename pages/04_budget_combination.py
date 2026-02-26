@@ -5,6 +5,19 @@ import os
 import itertools
 import random
 
+# 브랜드별 고유 컬러 반환 함수
+def get_brand_color(brand):
+    brand_colors = {
+        "CU": "#652D90",
+        "GS25": "#0054A6",
+        "7-Eleven": "#008061",
+        "7Eleven": "#008061",
+        "세븐일레븐": "#008061",
+        "emart24": "#FFB81C",
+        "이마트24": "#FFB81C"
+    }
+    return brand_colors.get(brand, "#8b949e")
+
 # ==========================================
 # 1. 상수 정의 (Constants)
 # ==========================================

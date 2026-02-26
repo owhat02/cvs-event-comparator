@@ -9,6 +9,19 @@ import pytz
 KST = pytz.timezone('Asia/Seoul')
 now_hour = datetime.now(KST).hour
 
+# 브랜드별 고유 컬러 반환 함수
+def get_brand_color(brand):
+    brand_colors = {
+        "CU": "#652D90",
+        "GS25": "#0054A6",
+        "7-Eleven": "#008061",
+        "7Eleven": "#008061",
+        "세븐일레븐": "#008061",
+        "emart24": "#FFB81C",
+        "이마트24": "#FFB81C"
+    }
+    return brand_colors.get(brand, "#8b949e")
+
 # 로컬 이미지를 HTML에서 사용하기 위한 base64 인코딩 함수
 def get_base64_image(image_path):
     if not os.path.exists(image_path):
@@ -74,8 +87,8 @@ try:
 .horizontal-scroll-wrapper {
     display: flex;
     overflow-x: auto;
-    gap: 15px;
-    padding: 10px 5px 20px 5px;
+    gap: 20px;
+    padding: 15px 5px 25px 5px;
     scroll-behavior: smooth;
 }
 .horizontal-scroll-wrapper::-webkit-scrollbar {
@@ -86,13 +99,31 @@ try:
     border-radius: 10px;
 }
 .scroll-item {
-    flex: 0 0 220px;
-    border: 1px solid #e0e0e0;
-    border-radius: 12px;
+    flex: 0 0 200px;
+    border: 1px solid #eef0f2;
+    border-radius: 16px;
     padding: 15px;
     background: white;
-    box-shadow: 2px 2px 8px rgba(0,0,0,0.05);
-    text-align: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    text-align: left; /* 전체 왼쪽 정렬로 변경하여 가독성 향상 */
+    transition: transform 0.2s;
+}
+.scroll-item:hover {
+    transform: translateY(-5px);
+}
+.item-name {
+    font-size: 16px; /* 폰트 크기 확대 */
+    font-weight: bold;
+    color: #1a1a1a;
+    margin: 8px 0;
+    height: 42px; /* 두 줄 높이 확보 */
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2; /* 최대 2줄까지 표시 */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: break-all;
 }
 </style>
 <div class="horizontal-scroll-wrapper">"""
@@ -100,15 +131,20 @@ try:
         for idx, row in display_df.iterrows():
             img_url = row['img_url'] if pd.notna(row['img_url']) else "https://via.placeholder.com/150?text=No+Image"
             price = int(str(row['price']).replace(',', '')) if pd.notna(row['price']) else 0
+            # 행사 종류에 따른 개당 가격 계산 로직 (기존 유지)
             unit_price = price // 2 if row['event'] == '1+1' else (price * 2 // 3 if row['event'] == '2+1' else (price * 3 // 4 if row['event'] == '3+1' else price))
             
+            brand_color = get_brand_color(row['brand'])
             scroll_html += f"""
     <div class="scroll-item">
-        <img src="{img_url}" style="width:100%; height:120px; object-fit:contain; border-radius:8px; margin-bottom:10px;">
-        <div style="font-size:12px; color:#888; text-align:left;">{row['brand']} | {row['event']}</div>
-        <div style="font-size:15px; font-weight:bold; margin: 5px 0; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{row['name']}</div>
-        <div style="font-size:18px; color:#ff4b4b; font-weight:900; text-align:left;">{price:,}원</div>
-        <div style="font-size:12px; color:#555; text-align:left; margin-top:5px;">👉 개당 {unit_price:,}원</div>
+        <img src="{img_url}" style="width:100%; height:130px; object-fit:contain; border-radius:8px; margin-bottom:12px;">
+        <div style="display: flex; align-items: center; gap: 5px; margin-bottom: 5px;">
+            <span style="font-size:0.8rem; color:{brand_color}; background:{brand_color}15; padding:2px 6px; border-radius:4px; font-weight:bold;">{row['brand']}</span>
+            <span style="font-size:11px; color:#ff4b4b; background:#fff0f0; padding:2px 6px; border-radius:4px; font-weight:bold;">{row['event']}</span>
+        </div>
+        <div class="item-name">{row['name']}</div>
+        <div style="font-size:18px; color:#1a1a1a; font-weight:900;">{price:,}원</div>
+        <div style="font-size:13px; color:#3182f6; font-weight:bold; margin-top:4px;">✨ 개당 {unit_price:,}원</div>
     </div>"""
         scroll_html += "</div>"
         st.markdown(scroll_html, unsafe_allow_html=True)
@@ -162,7 +198,9 @@ if df_time is not None:
                         </div>
                         <div style="color: #58a6ff; font-weight: bold; font-size: 1.1rem;">{int(row['price']):,}원</div>
                         <div style="font-size: 0.8rem; color: #ff6b6b; font-weight: bold;">{row['event']}</div>
-                        <div style="font-size: 0.75rem; color: #8b949e; margin-top: 5px;">📍 {row['brand']}</div>
+                        <div style="margin-top: 5px;">
+                            <span style="color:{get_brand_color(row['brand'])}; background:{get_brand_color(row['brand'])}15; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:0.8rem;">📍 {row['brand']}</span>
+                        </div>
                     </div>
                 """, unsafe_allow_html=True)
     else:
