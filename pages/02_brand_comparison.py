@@ -94,15 +94,15 @@ if not df.empty:
         (df['name'].str.contains(search_query, case=False, na=False))
     ]
 
-    # --- 정렬 로직 ---
+    # --- 정렬 로직 (모든 선택 브랜드 포함) ---
     if sort_option == "상품 많은 순":
-        brand_order = f_df['brand'].value_counts().index.tolist()
+        brand_order = f_df['brand'].value_counts().reindex(selected_brands, fill_value=0).sort_values(ascending=False).index.tolist()
     elif sort_option == "가격 낮은 순":
-        brand_order = f_df.groupby('brand')['unit_price'].mean().sort_values().index.tolist()
+        brand_order = f_df.groupby('brand')['unit_price'].mean().reindex(selected_brands).sort_values().index.tolist()
     elif sort_option == "할인율 높은 순":
-        brand_order = f_df.groupby('brand')['discount_rate'].mean().sort_values(ascending=False).index.tolist()
+        brand_order = f_df.groupby('brand')['discount_rate'].mean().reindex(selected_brands).sort_values(ascending=False).index.tolist()
     else:
-        brand_order = sorted(selected_brands)
+        brand_order = selected_brands
 
     if f_df.empty:
         st.warning("선택한 조건에 맞는 상품이 없습니다. 필터를 조정해 주세요.")
@@ -121,9 +121,11 @@ if not df.empty:
         with tab1:
             st.subheader("🧬 브랜드별 증정 전략 프로필 (Brand DNA)")
             stats = []
-            for brand in selected_brands:
+            for brand in brand_order:
                 b_df = f_df[f_df['brand'] == brand]
-                if b_df.empty: continue
+                if b_df.empty:
+                    stats.append({'brand': brand, '다양성': 0, '할인강도': 0, '식사특화': 0, '간식특화': 0, '가성비': 0})
+                    continue
                 variety = len(b_df)
                 depth = b_df['discount_rate'].mean()
                 meal_focus = len(b_df[b_df['category'] == '식사류']) / len(b_df) * 100
@@ -144,15 +146,22 @@ if not df.empty:
 
         # Tab 2: 카테고리 및 행사 비중 분석
         with tab2:
-            st.subheader("브랜드별 행사 유형 비중 (1+1 vs 2+1)")
-            # 비중 데이터 계산 (Normalization)
-            event_pct = f_df.groupby(['brand', 'event']).size().reset_index(name='count')
-            brand_totals = event_pct.groupby('brand')['count'].transform('sum')
-            event_pct['percentage'] = (event_pct['count'] / brand_totals) * 100
+            st.subheader("브랜드별 행사 유형 비중 (1+1 vs 2+1 vs 3+1)")
             
-            fig_pct = px.bar(event_pct, x='brand', y='percentage', color='event',
-                            text=event_pct['percentage'].apply(lambda x: f'{x:.1f}%'),
-                            category_orders={"brand": brand_order},
+            # 모든 브랜드/행사 조합을 포함하기 위해 범주형 변환
+            plot_df = f_df.copy()
+            plot_df['brand'] = pd.Categorical(plot_df['brand'], categories=brand_order, ordered=True)
+            plot_df['event'] = pd.Categorical(plot_df['event'], categories=selected_events, ordered=True)
+            plot_df['category'] = pd.Categorical(plot_df['category'], categories=selected_cats, ordered=True)
+
+            # 비중 데이터 계산 (모든 조합 유지)
+            event_stats = plot_df.groupby(['brand', 'event'], observed=False).size().reset_index(name='count')
+            brand_totals = event_stats.groupby('brand')['count'].transform('sum')
+            event_stats['percentage'] = np.where(brand_totals > 0, (event_stats['count'] / brand_totals) * 100, 0)
+            
+            fig_pct = px.bar(event_stats, x='brand', y='percentage', color='event',
+                            text=event_stats['percentage'].apply(lambda x: f'{x:.1f}%' if x > 0 else ''),
+                            category_orders={"brand": brand_order, "event": selected_events},
                             color_discrete_sequence=px.colors.qualitative.Pastel,
                             labels={'percentage': '비중 (%)', 'brand': '브랜드', 'event': '행사유형'})
             fig_pct.update_layout(yaxis_title="비중 (%)", barmode='stack', height=450)
@@ -161,13 +170,25 @@ if not df.empty:
 
             col1, col2 = st.columns(2)
             with col1:
-                st.subheader("카테고리별 비중 (Treemap)")
-                fig_tree = px.treemap(f_df, path=['brand', 'category'], color='brand', color_discrete_map=brand_colors)
-                st.plotly_chart(fig_tree, use_container_width=True)
+                st.subheader("브랜드별 카테고리 구성 (Stacked Bar)")
+                # Treemap은 순서 고정이 어려우므로 정렬 가능한 Stacked Bar로 변경
+                cat_stats = plot_df.groupby(['brand', 'category'], observed=False).size().reset_index(name='count')
+                cat_brand_totals = cat_stats.groupby('brand')['count'].transform('sum')
+                cat_stats['percentage'] = np.where(cat_brand_totals > 0, (cat_stats['count'] / cat_brand_totals) * 100, 0)
+                
+                fig_cat_pct = px.bar(cat_stats, x='brand', y='percentage', color='category',
+                                    text=cat_stats['percentage'].apply(lambda x: f'{x:.1f}%' if x > 5 else ''), # 5% 이상만 표시
+                                    category_orders={"brand": brand_order, "category": selected_cats},
+                                    color_discrete_sequence=px.colors.qualitative.Safe,
+                                    labels={'percentage': '비중 (%)', 'brand': '브랜드', 'category': '카테고리'})
+                fig_cat_pct.update_layout(yaxis_title="비중 (%)", barmode='stack', height=450)
+                st.plotly_chart(fig_cat_pct, use_container_width=True)
             with col2:
                 st.subheader("브랜드 x 카테고리 집중도 (Heatmap)")
-                heat_data = f_df.groupby(['brand', 'category']).size().unstack(fill_value=0)
-                fig_heat = px.imshow(heat_data, text_auto=True, color_continuous_scale='GnBu')
+                # Heatmap 데이터 생성 (Categorical 반영으로 자동 정렬됨)
+                heat_data = plot_df.groupby(['brand', 'category'], observed=False).size().unstack(fill_value=0)
+                fig_heat = px.imshow(heat_data, text_auto=True, color_continuous_scale='GnBu',
+                                   labels=dict(x="카테고리", y="브랜드", color="상품 수"))
                 st.plotly_chart(fig_heat, use_container_width=True)
 
         # Tab 3: 가격 전략
@@ -190,12 +211,12 @@ if not df.empty:
             st.subheader("🔍 트렌드 키워드 대응력")
             keywords = {'제로/슈가프리': ['제로', 'zero', '무설탕', '저당'], '단백질/헬스': ['단백질', '프로틴', 'protein', '닭가슴살'], '매운맛/마라': ['매운', '핫', 'hot', '마라', '불닭'], '과일/상큼': ['딸기', '사과', '포도', '망고', '레몬']}
             key_stats = []
-            for brand in selected_brands:
+            for brand in brand_order:
                 b_df = f_df[f_df['brand'] == brand]
                 for key, words in keywords.items():
                     count = b_df['name'].str.contains('|'.join(words), case=False, na=False).sum()
                     key_stats.append({'브랜드': brand, '트렌드': key, '상품 수': count})
-            fig_key = px.bar(pd.DataFrame(key_stats), x='트렌드', y='상품 수', color='브랜드', barmode='group', color_discrete_map=brand_colors, text_auto=True)
+            fig_key = px.bar(pd.DataFrame(key_stats), x='트렌드', y='상품 수', color='브랜드', barmode='group', color_discrete_map=brand_colors, text_auto=True, category_orders={"브랜드": brand_order})
             st.plotly_chart(fig_key, use_container_width=True)
 
         # Tab 5: 요약 통계
@@ -204,31 +225,65 @@ if not df.empty:
             col_s1, col_s2 = st.columns([1, 1.2])
             with col_s1:
                 st.write(f"✨ 브랜드별 상품 수 (정렬: {sort_option})")
-                brand_counts = f_df['brand'].value_counts().reindex(brand_order).reset_index()
+                brand_counts = f_df['brand'].value_counts().reindex(brand_order, fill_value=0).reset_index()
                 brand_counts.columns = ['브랜드', '상품 개수']
                 fig_v1 = px.bar(brand_counts, x='브랜드', y='상품 개수', text='상품 개수', color='브랜드', color_discrete_map=brand_colors, category_orders={"브랜드": brand_order})
-                fig_v1.update_layout(xaxis_tickangle=0, showlegend=False, height=400)
+                fig_v1.update_traces(textposition='outside', marker_line_width=0, width=0.5)
+                fig_v1.update_layout(xaxis_tickangle=0, showlegend=False, height=400, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', margin=dict(l=20, r=20, t=20, b=20))
                 st.plotly_chart(fig_v1, use_container_width=True)
             with col_s2:
-                st.write("📝 행사 유형별 상세 통계")
-                event_pivot = f_df.groupby(['brand', 'event']).size().unstack(fill_value=0).reindex(brand_order)
+                st.write(f"📝 행사 유형별 상세 통계 ({sort_option})")
+                # 피벗 생성 및 브랜드 정렬
+                event_pivot = f_df.groupby(['brand', 'event']).size().unstack(fill_value=0).reindex(brand_order, fill_value=0)
+                
+                # 사용자가 필터에서 선택한 순서대로 컬럼 정렬
+                # pivot 테이블에 존재하는 컬럼만 필터링하여 순서 적용
+                cols_order = [e for e in selected_events if e in event_pivot.columns]
+                # 혹시 pivot에만 존재하는 컬럼이 있다면 뒤에 추가 (예외 상황 대비)
+                remaining_cols = [c for c in event_pivot.columns if c not in selected_events]
+                event_pivot = event_pivot[cols_order + remaining_cols]
+                
                 st.dataframe(event_pivot, use_container_width=True)
+
             st.divider()
             col_s3, col_s4 = st.columns(2)
             with col_s3:
                 st.subheader("💰 평균 가격 추이")
                 avg_price = f_df.groupby('brand')['unit_price'].mean().reindex(brand_order).reset_index()
+                avg_price.columns = ['brand', 'unit_price']
                 fig_v2 = px.line(avg_price, x='brand', y='unit_price', markers=True, category_orders={"brand": brand_order})
                 fig_v2.update_traces(line=dict(color="#FF6B6B", width=3), marker=dict(size=10))
+                fig_v2.update_layout(height=400, xaxis_title=None, yaxis_title="평균 가격 (원)", margin=dict(l=20, r=20, t=20, b=20))
                 st.plotly_chart(fig_v2, use_container_width=True)
             with col_s4:
                 st.subheader("📉 평균 할인율 (Toss Style)")
                 avg_disc = f_df.groupby('brand')['discount_rate'].mean().reindex(brand_order).reset_index()
+                avg_disc.columns = ['brand', 'discount_rate']
+                
+                # 돋보기 효과를 위한 Y축 범위 계산
+                min_val = avg_disc['discount_rate'].min()
+                max_val = avg_disc['discount_rate'].max()
+                y_min = max(0, min_val - 2) if pd.notnull(min_val) else 0
+                y_max = (max_val + 2) if pd.notnull(max_val) and max_val > 0 else 50
+
                 fig_v3 = px.bar(avg_disc, x='brand', y='discount_rate', 
                                 text=avg_disc['discount_rate'].apply(lambda x: f"{x:.1f}%" if pd.notnull(x) else "0%"),
                                 color='brand', color_discrete_map=brand_colors, category_orders={"brand": brand_order})
-                fig_v3.update_traces(textposition='outside', marker_line_width=0, width=0.5)
-                fig_v3.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', yaxis=dict(showticklabels=False, showgrid=True, gridcolor='rgba(255,255,255,0.05)'), xaxis=dict(showgrid=False), showlegend=False, height=400)
+                fig_v3.update_traces(
+                    textposition='outside', 
+                    textfont=dict(size=14, weight='bold'),
+                    marker_line_width=0, 
+                    width=0.45
+                )
+                fig_v3.update_layout(
+                    plot_bgcolor='rgba(0,0,0,0)', 
+                    paper_bgcolor='rgba(0,0,0,0)', 
+                    yaxis=dict(showticklabels=False, showgrid=True, gridcolor='rgba(255,255,255,0.05)', range=[y_min, y_max]), 
+                    xaxis=dict(showgrid=False), 
+                    showlegend=False, 
+                    height=400,
+                    margin=dict(l=10, r=10, t=40, b=10)
+                )
                 st.plotly_chart(fig_v3, use_container_width=True)
 
         with st.expander("📄 검색 결과 상품 목록"):
