@@ -63,16 +63,22 @@ def load_data():
     df['price'] = df['price'].astype(int)
     df['unit_price'] = df['price'].astype(float)
     df['discount_rate'] = 0.0
+    
+    # 실제 결제 개수와 총 개수 정의
+    df['pay_count'] = 1
+    df['total_count'] = 1
 
     masks = {
-        '1+1': (df['price'] / 2, 50.0),
-        '2+1': ((df['price'] * 2) / 3, 33.3),
-        '3+1': ((df['price'] * 3) / 4, 25.0)
+        '1+1': (df['price'] / 2, 50.0, 1, 2),
+        '2+1': ((df['price'] * 2) / 3, 33.3, 2, 3),
+        '3+1': ((df['price'] * 3) / 4, 25.0, 3, 4)
     }
-    for event_type, (unit_price_calc, discount) in masks.items():
+    for event_type, (unit_price_calc, discount, pay_cnt, total_cnt) in masks.items():
         mask = df['event'].astype(str).str.contains(event_type.replace('+', r'\+'), na=False)
         df.loc[mask, 'unit_price'] = unit_price_calc
         df.loc[mask, 'discount_rate'] = discount
+        df.loc[mask, 'pay_count'] = pay_cnt
+        df.loc[mask, 'total_count'] = total_cnt
 
     df['unit_price'] = df['unit_price'].astype(int)
     return df
@@ -94,11 +100,13 @@ def get_candidate_pools(df, categories, budget):
     target_price = budget / len(categories)
     
     for cat in categories:
-        cat_df = df[(df['category'] == cat) & (df['price'] <= budget * 0.6)].copy()
+        # 번들 결제 금액(price * pay_count) 기준으로 예산 필터링
+        cat_df = df[(df['category'] == cat) & (df['price'] * df['pay_count'] <= budget * 0.7)].copy()
         if cat_df.empty:
             continue
             
-        cat_df['price_diff'] = (cat_df['price'] - target_price).abs()
+        # 번들 결제 금액과 목표 금액의 차이 계산
+        cat_df['price_diff'] = (cat_df['price'] * cat_df['pay_count'] - target_price).abs()
 
         if cat == '식사류':
             mask_include = cat_df['name'].str.contains('|'.join(MEAL_KEYWORDS), case=False, na=False)
@@ -118,12 +126,20 @@ def get_candidate_pools(df, categories, budget):
             
     return candidate_items
 
-def find_best_combinations(df, selected_categories, budget, search_keyword=""):
+def find_best_combinations(df, selected_categories, budget, selected_events, search_keyword=""):
     """
     최적의 꿀조합을 찾습니다. 
-    검색어 필터링 시 카테고리 불일치로 인한 '결과 없음' 오류를 해결하고 기존 로직을 모두 보존합니다.
+    행사 유형(selected_events) 필터링을 추가했습니다.
     """
-    
+    # 0. 행사 유형 필터링 적용
+    if selected_events:
+        # '1+1' 등의 텍스트가 포함된 행만 필터링 (regex 사용 방지 위해 단순 string check)
+        event_mask = df['event'].apply(lambda x: any(e in str(x) for e in selected_events))
+        df = df[event_mask].copy()
+
+    if df.empty:
+        return []
+
     # ---------------------------------------------------------
     # 1. 식사류 짝꿍 후보 추출 (전체 데이터 기반 - 기존 로직 100% 보존)
     # ---------------------------------------------------------
@@ -197,7 +213,7 @@ def find_best_combinations(df, selected_categories, budget, search_keyword=""):
             
             # 국물 상품만 있고 밥이 없는 경우 밥 추가
             if has_soup and not has_staple_rice and not is_complete_meal and rice_candidates:
-                rice_added = next((r for r in rice_candidates if sum(i['price'] for i in current_items) + r['price'] <= budget), None)
+                rice_added = next((r for r in rice_candidates if sum(i['price'] * i['pay_count'] for i in current_items) + (r['price'] * r['pay_count']) <= budget), None)
                 if rice_added:
                     current_items.append(rice_added)
                     has_staple_rice = True
@@ -205,34 +221,35 @@ def find_best_combinations(df, selected_categories, budget, search_keyword=""):
             # 맨밥만 있고 반찬이 없는 경우 반찬 추가
             has_side = any(any(k in i['name'] for k in SIDE_DISH_KEYWORDS) for i in current_items)
             if not has_soup and not is_complete_meal and not has_side and has_staple_rice and side_candidates:
-                side_added = next((s for s in side_candidates if s['name'] not in [i['name'] for i in current_items] and sum(i['price'] for i in current_items) + s['price'] <= budget), None)
+                side_added = next((s for s in side_candidates if s['name'] not in [i['name'] for i in current_items] and sum(i['price'] * i['pay_count'] for i in current_items) + (s['price'] * s['pay_count']) <= budget), None)
                 if side_added:
                     current_items.append(side_added)
 
         # ---------------------------------------------------------
         # 4. 남은 예산 알뜰하게 채우기 (기존 로직 보존)
         # ---------------------------------------------------------
-        current_total = sum(i['price'] for i in current_items)
+        current_total = sum(i['price'] * i['pay_count'] for i in current_items)
         if budget - current_total >= 1000 and len(current_items) < 5:
             # 예산 범위 안에서 랜덤하게 간식/음료 등 추가
             target_fill_cats = ['식사류', '간식류', '음료']
-            all_selectable = df[df['category'].isin(target_fill_cats) & (df['price'] <= budget - current_total)].to_dict('records')
+            all_selectable = df[df['category'].isin(target_fill_cats) & (df['price'] * df['pay_count'] <= budget - current_total)].to_dict('records')
             random.shuffle(all_selectable)
 
             for extra in all_selectable:
                 if extra['name'] not in [i['name'] for i in current_items]:
-                    if sum(i['price'] for i in current_items) + extra['price'] <= budget:
+                    if sum(i['price'] * i['pay_count'] for i in current_items) + (extra['price'] * extra['pay_count']) <= budget:
                         current_items.append(extra)
                         if len(current_items) >= 5: break
 
         # ---------------------------------------------------------
         # 5. 최종 조합 저장 및 정렬
         # ---------------------------------------------------------
-        total_price = sum(i['price'] for i in current_items)
+        total_price = sum(i['price'] * i['pay_count'] for i in current_items)
         if total_price <= budget:
             combo_names = tuple(sorted([i['name'] for i in current_items]))
             if combo_names not in seen_names:
-                saved_money = sum(i['price'] - i['unit_price'] for i in current_items)
+                # 절약 금액: (총 개수 - 결제 개수) * 단품가 = 무료 증정분의 가치
+                saved_money = sum((i['total_count'] - i['pay_count']) * i['price'] for i in current_items)
                 valid_combinations.append({
                     'items': current_items, 
                     'total_price': total_price, 
@@ -282,6 +299,9 @@ with st.container(border=True):
     with col2:
         selected_brands = st.multiselect("🏪 특정 편의점을 선호하시나요? (미선택 시 전체)", options=list(df['brand'].unique()), default=[])
 
+    # 행사 유형 선택 추가
+    selected_events = st.multiselect("🎁 선호하는 행사 (미선택 시 전체)", options=['1+1', '2+1', '3+1'], default=['1+1', '2+1', '3+1'])
+
     # 키워드 검색창
     search_keyword = st.text_input("🔍 특정 상품을 포함하고 싶나요?", placeholder="예: 라면, 도시락, 삼각김밥 (입력하지 않으면 전체 추천)")
 
@@ -304,12 +324,13 @@ if st.button("✨ 최적의 꿀조합 찾기", use_container_width=True):
         with st.spinner(loading_msg):
             filtered_df = df[df['brand'].isin(selected_brands)] if selected_brands else df
             
-            # 함수 호출 시 search_keyword 인자를 전달함
+            # 함수 호출 시 search_keyword와 selected_events 인자를 전달함
             # 세션 상태에 결과를 저장하여 페이지가 새로고침되어도 데이터가 유지되도록 합니다.
             st.session_state.budget_combinations = find_best_combinations(
                 filtered_df, 
                 selected_categories, 
                 budget, 
+                selected_events=selected_events,
                 search_keyword=search_keyword
             )
             st.session_state.budget_searched = True
@@ -352,14 +373,17 @@ if top_combinations:
                                 <span style='color:{brand_color}; background:{brand_color}15; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:0.75rem;'>{item['brand']}</span>
                             </div>
                             <div style="font-size: 0.9rem; color: #58a6ff; font-weight: bold;">{item['price']:,}원</div>
-                            <div style="font-size: 0.7rem; color: #888; margin-top: 3px;">{item['event']}</div>
+                            <div style="font-size: 0.75rem; color: #ff6b6b; font-weight: bold; margin-top: 3px;">{item['event']}</div>
                         </div>
                     """, unsafe_allow_html=True)
                     
                     # 장바구니 버튼 연동
                     cart_key = (item['name'], item['brand'], item['event'])
                     in_cart = is_in_cart(item['name'], item['brand'], item['event'])
-                    unit_price = int(item.get('unit_price', item['price']))
+                    
+                    # 장바구니에 담을 때는 단품 가격(price)과 낱개 체감가(unit_price) 전달
+                    price_to_pay = int(item['price'])
+                    unit_price = int(item['unit_price'])
                     btn_key = f"budget_cart_{idx}_{i}"
                     
                     if in_cart:
@@ -368,7 +392,7 @@ if top_combinations:
                             st.rerun()
                     else:
                         if st.button("🛒 담기", key=btn_key, use_container_width=True):
-                            add_to_cart(item['name'], item['brand'], item['event'], int(item['price']), unit_price)
+                            add_to_cart(item['name'], item['brand'], item['event'], price_to_pay, unit_price)
                             st.rerun()
             st.write("") 
 elif st.session_state.get('budget_searched') and not top_combinations:
