@@ -94,6 +94,15 @@ if not df.empty:
         
         with r1_c1:
             search_query = st.text_input("📝 상품 검색", "", placeholder="예: 닭발, 감자칩, 소시지")
+
+            if search_query:
+                if 'recent_keywords' not in st.session_state:
+                    st.session_state['recent_keywords'] = []
+                if search_query in st.session_state['recent_keywords']:
+                    st.session_state['recent_keywords'].remove(search_query)
+                st.session_state['recent_keywords'].insert(0, search_query)
+                st.session_state['recent_keywords'] = st.session_state['recent_keywords'][:5]
+                
         with r1_c2:
             snack_themes = {
                 "🍺 맥주와 찰떡궁합": ["치킨", "너겟", "소시지", "핫바", "만두", "피자", "감자", "나쵸", "과자", "팝콘", "땅콩", "아몬드", "어포"],
