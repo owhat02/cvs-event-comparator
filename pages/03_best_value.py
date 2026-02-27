@@ -59,6 +59,15 @@ if not df.empty:
         r1_c1, r1_c2 = st.columns([3, 1])
         with r1_c1:
             search_query = st.text_input("📝 검색", "", placeholder="상품명 입력")
+
+            if search_query:
+                if 'recent_keywords' not in st.session_state:
+                    st.session_state['recent_keywords'] = []
+                if search_query in st.session_state['recent_keywords']:
+                    st.session_state['recent_keywords'].remove(search_query)
+                st.session_state['recent_keywords'].insert(0, search_query)
+                st.session_state['recent_keywords'] = st.session_state['recent_keywords'][:5]
+                
         with r1_c2:
             # 아래 코드의 정렬 옵션 반영
             sort_option = st.selectbox("💰 정렬", ["가성비 순 (할인율)", "가격 낮은 순", "가격 높은 순"])

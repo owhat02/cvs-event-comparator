@@ -99,6 +99,15 @@ if not df.empty:
         r1_c1, r1_c2, r1_c3 = st.columns([2, 1, 1])
         with r1_c1:
             search_query = st.text_input("📝 검색", "", placeholder="상품명 입력")
+
+            if search_query:
+                if 'recent_keywords' not in st.session_state:
+                    st.session_state['recent_keywords'] = []
+                if search_query in st.session_state['recent_keywords']:
+                    st.session_state['recent_keywords'].remove(search_query)
+                st.session_state['recent_keywords'].insert(0, search_query)
+                st.session_state['recent_keywords'] = st.session_state['recent_keywords'][:5]
+                
         with r1_c2:
             tags = {
                 "🥤 제로 & 저당": ["제로", "zero", "무가당", "슈가프리", "0칼로리"],
